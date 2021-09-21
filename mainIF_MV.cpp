@@ -1,8 +1,9 @@
 #include "./include/namespace.h"
 #include "./include/dataIO.h"
+#include <chrono>
 
-const int maxn = 11000;
-const int maxd = 30;
+const int maxn = 10000;
+const int maxd = 3;
 const long double eps = 1e-6;
 
 using namespace std;
@@ -21,14 +22,21 @@ int main(int argc, char *argv[])
     int k = atoi(argv[4]);
 
     DataIO DIO(n, d, k, inputFileName, maxn, maxd, eps);
+    DIO.readInput(inputFileName);
 
-    DIO.computeFairRadius(maxn);
+    //time start
+    auto startTime = std::chrono::system_clock::now();
+    DIO.computeFairRadius(maxn, inputFileName);
 
     DIO.computeJungEtAlAlphaAndCost();
 
     DIO.computeMVIndFair();
+    
+    auto endTime = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+    double totalComputeTime = elapsed.count();
 
-    DIO.generate_output();
+    DIO.generate_output(inputFileName, totalComputeTime, 0);
 
 	return 0;
 }
