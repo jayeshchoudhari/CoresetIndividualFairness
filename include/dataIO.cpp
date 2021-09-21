@@ -641,6 +641,11 @@ long double DataIO :: Local_Search_Weighted(long double alpha)
 
 int DataIO :: storeCenters()
 {
+	cout << "Printing centers -- " << centers.size() << endl;
+	for(int i = 0; i < centers.size(); i++)
+	{
+		cout << i << " " << centers[i] << " " <<  printVec(point[centers[i]]) << endl;
+	}
 
 	unordered_map<int, bool> uniqueCenterIds; 
 
@@ -659,6 +664,12 @@ int DataIO :: storeCenters()
 	// {
 		centerVectors.push_back(it->first);
 	}
+
+	cout << "Printing center vectors -- " << centerVectors.size() << endl;
+	for(int i = 0; i < centerVectors.size(); i++)
+	{
+		cout << i << " " << centerVectors[i] << " "<< printVec(point[centerVectors[i]]) << endl;
+	}
 	return 0;
 }
 
@@ -669,8 +680,8 @@ int DataIO :: computeMVIndFair()
 	cout << "Evaluating Fairness...\n";
 	output_ls_fair = evaluate_fairness();
 
-	storeCenters();
-	cout << "stored centers\n";
+	// storeCenters();
+	// cout << "stored centers\n";
 	return 0;
 }
 
@@ -680,8 +691,9 @@ int DataIO :: computeMVIndFairWeighted()
 	output_ls_cost = Local_Search_Weighted(alpha);
 	cout << "Evaluating Fairness...\n";
 	output_ls_fair = evaluate_fairness();
-	storeCenters();
-	cout << "stored centers\n";
+	
+	// storeCenters();
+	// cout << "stored centers\n";
 	return 0;
 }
 
@@ -689,12 +701,12 @@ int DataIO :: computeMVIndFairWeighted()
 long double DataIO :: computeCostForPoint(vector<long double> eachPoint)
 {
 	// long double minCost = computeEuclideanDist(eachPoint, point[centerVectors[0]]);
-	long double minCost = compute_dist_vectors(eachPoint, point[centerVectors[0]]);
+	long double minCost = compute_dist_vectors(eachPoint, point[centers[0]]);
 
-	for(int i = 1; i < centerVectors.size(); i++)
+	for(int i = 1; i < centers.size(); i++)
 	{
 		// long double thisCenterCost = computeEuclideanDist(eachPoint, point[centerVectors[i]]);
-		long double thisCenterCost = compute_dist_vectors(eachPoint, point[centerVectors[i]]);
+		long double thisCenterCost = compute_dist_vectors(eachPoint, point[centers[i]]);
 		if (minCost > thisCenterCost)
 		{
 			minCost = thisCenterCost;
