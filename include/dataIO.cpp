@@ -4,55 +4,110 @@
 
 using namespace std;
 
-DataIO :: DataIO(int n, int d, int k, string inputFileName, int maxn, int maxd, long double eps)
+DataIO :: DataIO(int numPoints, int dim, int kcenters, string inputFileName, int maxn, int maxd, long double epsVal)
 {
-	n = n;
-	d = d;
-	k = k;
-	eps = eps;
+	n = numPoints;
+	d = dim;
+	k = kcenters;
+	eps = epsVal;
 
-	point.resize(maxn, vector<long double>(maxd));
+	cout << n << " " << d  << " " << k << " " << eps << endl;
 
-	r.resize(maxn);
+	// point.resize(maxn, vector<long double>(maxd));
 
-	covered.resize(maxn, 0);	//shows if a point is covered by current centers
-	center.resize(maxn, -1);	//shows the corresponding center for each point -- default set to -1
+	r.resize(numPoints);
+	// ogWeights.resize(maxn, 0.0);
+	corWeights.resize(numPoints, 0.0);
 
-	whichBall.resize(maxn, -1);	//keeps for each point in which critical ball they exist or -1 otherwise
-	iscenter.resize(maxn, 0);	//keeps for each point if it is in the current set of centers
+	covered.resize(numPoints, 0);	//shows if a point is covered by current centers
+	center.resize(numPoints, -1);	//shows the corresponding center for each point -- default set to -1
 
-	readInput(inputFileName);
+	whichBall.resize(numPoints, -1);	//keeps for each point in which critical ball they exist or -1 otherwise
+	iscenter.resize(numPoints, 0);	//keeps for each point if it is in the current set of centers
+
+	// readInput(inputFileName);
 }
 
 //Reading the input points. Each point comes in a separate line and the coordinates are separated by comma.
-int DataIO :: readInput(string filename)
+int DataIO :: readInput(string fileName)
 {
+	cout << "Reading input -- " << endl;
+	cout << n << " " << d  << " " << k << " " << eps << endl;
+
+	long double tempVar;
 	// ifstream fin("input.csv");
-	ifstream fin(filename);
-	for (int i=0 ; i<n ; ++i)
+	ifstream fin(fileName);
+	// space separated  values...
+	for(int i = 0; i < n; i++)
 	{
-		for (int j=0 ; j<d ; ++j)
+		vector<long double> tempvec;
+		long double tempval;
+		for(int j = 0; j < d; j++)
 		{
-			fin >> point[i][j];
-			char c;
-			if (j<d-1)
-				fin >> c;		// for the comma...
+			fin >> tempval;
+			tempvec.push_back(tempval);
 		}
+		point.push_back(tempvec);
+
+		// if there is any other with weights.. 
+		// last index of each line is weight...
+		corWeights[i] = 1.0;
 	}
+
+	fin.close();
+	// printVecVec(point);
 	return 0;
 }
+
+// Reading the input points. Each point comes in a separate line and the coordinates are separated by comma.
+// last index is the weight of the point
+int DataIO :: readInputWeighted(string fileName)
+{
+	cout << "Reading input -- " << endl;
+	cout << n << " " << d  << " " << k << " " << eps << endl;
+
+	ifstream fin(fileName);
+	// space separated  values...
+	for(int i = 0; i < n; i++)
+	{
+		long double weightVal;
+		vector<long double> tempvec;
+		long double tempval;
+		for(int j = 0; j < d; j++)
+		{
+			fin >> tempval;
+			tempvec.push_back(tempval);
+		}
+		point.push_back(tempvec);
+		fin >> weightVal;
+
+		// if there is any other with weights...
+		// last index of each line is weight...
+		corWeights[i] = weightVal;
+	}
+
+	fin.close();
+	// printVecVec(point);
+	return 0;
+}
+
+
 
 long double DataIO :: compute_r(int i, int maxn)
 {
 	//computes the fair radius for each point
-	long double temp[maxn];
+	long double temp[n];
 
 	for (int j=0 ; j<n ; ++j)
 	{
-		temp[j] = computeEuclideanDist(point[i], point[j]);
+		// temp[j] = computeEuclideanDist(point[i], point[j]);
+		temp[j] = compute_dist(i, j);
+		// cout << i << " " << temp[j] << endl;
 	}
 
-	sort(temp,temp+n);
+	sort(temp, temp+n);
+
+	// cout << "i = " << i << " rVal : " << temp[(n-1)/k] << " (n-1)/k = " << (n-1)/k << endl;
 
 	// have to consider weights... 
 	// take sum of first l points that weigh to n-1/k -- change
@@ -60,10 +115,99 @@ long double DataIO :: compute_r(int i, int maxn)
 }
 
 
-int DataIO :: computeFairRadius(int maxn)
+long double DataIO :: compute_r_weighted(int i, int maxn, long double totalWeight)
+{
+	//computes the fair radius for each point
+	long double temp[n];
+	vector< vector<long double> > tempRadWeights;
+	// tempRadWeights.resize(maxn, vector<long double>(2));
+
+	for (int j=0 ; j<n ; ++j)
+	{
+		// temp[j] = computeEuclideanDist(point[i], point[j]);
+		temp[j] = compute_dist(i, j);
+		vector<long double>  tempVec;
+
+		tempVec.push_back(temp[j]);
+		tempVec.push_back(corWeights[j]);
+
+		tempRadWeights.push_back(tempVec);
+	}
+
+	// sort(tempRadWeights.begin(), tempRadWeights.end());
+	sort(tempRadWeights.begin(), tempRadWeights.end(), sortcol);
+
+	// printVecVec(tempRadWeights);
+
+	long double localWeight = 0.0;
+	// This is over expectation -- n is not present...
+	// Change this to sum of weights...
+	// long double maxWeight = ((n-1)*1.0)/k;
+	long double maxWeight = totalWeight/k;
+	// cout << "max weight : " << maxWeight << " totalWeight = " << totalWeight << endl;
+	long double rVal = tempRadWeights[(n-1)/k][0];
+
+	for(int q = 0; q < tempRadWeights.size(); q++)
+	{
+		if(localWeight + tempRadWeights[q][1] <= maxWeight)
+		{
+			localWeight += tempRadWeights[q][1];
+		}
+		else
+		{
+			rVal = tempRadWeights[q-1][0];
+			break;
+		}
+	}
+
+	// cout << "i = " << i << " rVal : " << rVal << endl;
+	// have to consider weights... 
+	// take sum of first l points that weigh to n-1/k -- change
+	// return temp[(n-1)/k];
+	return rVal;
+}
+
+
+int DataIO :: computeFairRadius(int maxn, string fileName)
 {
 	for (int i=0 ; i<n ; ++i)//compute fair radiuses
-		r[i] = compute_r(i, maxn);
+	{
+		r[i] = compute_r(i, n);
+		// cout << i << " " << r[i] << endl;
+	}
+
+
+	fileName = "./fairRadiusFiles/fairRadius_" + fileName;
+
+	ofstream fout(fileName);
+
+	// space separated  values...
+	for(int i = 0; i < r.size(); i++)
+	{
+		fout << i << " " << r[i] << "\n";
+	}
+
+	fout.close();
+
+	return 0;
+}
+
+
+int DataIO :: computeWeightedFairRadius(int maxn)
+{
+	long double totalWeight = 0.0;
+
+	for(int i = 0; i < corWeights.size(); i++)
+	{
+		totalWeight += corWeights[i];
+	}
+	// cout << "Total Weight = " << totalWeight << endl;
+
+	for (int i=0 ; i<n ; ++i)//compute fair radiuses
+	{
+		r[i] = compute_r_weighted(i, maxn, totalWeight);
+		// cout << r[i] << endl;
+	}
 
 	return 0;
 }
@@ -72,7 +216,8 @@ int DataIO :: computeFairRadius(int maxn)
 int DataIO :: compute_balls(long double alpha)
 {
 	//computes a set of balls with respect to the fairness parameter alpha such that each point x, has a center within distance alpha*r[x]
-	// memset(covered, 0, sizeof(covered));
+	for(int i = 0; i < n; i++)
+		covered[i] = 0;
 
 	int center_number = 0;
 	while (true)
@@ -94,10 +239,12 @@ int DataIO :: compute_balls(long double alpha)
 		}
 		
 		center_number++;
+
 		
 		for (int i=0 ; i<n ; ++i)
 		{
-			if (!covered[i] && computeEuclideanDist(point[new_c],point[i]) <= alpha*r[i]+eps)
+			// if (!covered[i] && computeEuclideanDist(point[new_c],point[i]) <= alpha*r[i]+eps)
+			if (!covered[i] && compute_dist(new_c,i) <= alpha*r[i]+eps)
 			{
 				covered[i] = true;
  				center[i] = new_c;
@@ -149,8 +296,24 @@ long double DataIO :: compute_k_median_cost()
 	for (int i=0; i < n; ++i)
 	{
 		// multiply distance by weight... -- change
-		long double d = computeEuclideanDist(point[i], point[center[i]]);
+		// long double d = computeEuclideanDist(point[i], point[center[i]]);
+		long double d = compute_dist(i, center[i]);
 		ans += d;
+	}
+	return ans;
+}
+
+
+//this function computes the weighted k-median cost using the array center.
+long double DataIO :: compute_weighted_k_median_cost()
+{
+	long double ans = 0.0;
+	for (int i=0; i < n; ++i)
+	{
+		// multiply distance by weight... -- change
+		// long double d = computeEuclideanDist(point[i], point[center[i]]);
+		long double d = compute_dist(i, center[i]);
+		ans += (corWeights[i] * d);
 	}
 	return ans;
 }
@@ -168,6 +331,18 @@ int DataIO :: computeJungEtAlAlphaAndCost()
 }
 
 
+int DataIO :: computeJungEtAlAlphaAndCostWeighted()
+{
+	alpha = find_alpha();
+	output_jung_fair = alpha;
+	compute_balls(alpha);//compute critical balls
+	output_jung_cost = compute_weighted_k_median_cost();	//compute cost of 
+
+	cout << "Jung et al. alpha = " << alpha << " ----- Cost = " << output_jung_cost << endl;
+	return 0;
+}
+
+
 
 int DataIO :: add_center()
 {//this function is used in the initialization step and adds one more center that is furthest away from current centers
@@ -175,9 +350,11 @@ int DataIO :: add_center()
 	int candidate = -1;
 	for (int i=0 ; i<n ; ++i)
 	{
-		if (center[i]!=i && computeEuclideanDist(point[i],point[center[i]])>dist)
+		// if (center[i]!=i && computeEuclideanDist(point[i],point[center[i]])>dist)
+		if (center[i]!=i && compute_dist(i,center[i])>dist)
 		{
-			dist = computeEuclideanDist(point[i],point[center[i]]);
+			// dist = computeEuclideanDist(point[i],point[center[i]]);
+			dist = compute_dist(i, center[i]);
 			candidate = i;
 		}
 	}
@@ -191,7 +368,8 @@ int DataIO :: add_center()
 	}
 	for (int i=0 ; i<n ; ++i)
 	{
-		if (computeEuclideanDist(point[i],point[candidate])<computeEuclideanDist(point[i],point[center[i]]))
+		// if (computeEuclideanDist(point[i],point[candidate]) < computeEuclideanDist(point[i],point[center[i]]))
+		if (compute_dist(i,candidate) < compute_dist(i,center[i]))
 		{
 			center[i] = candidate;
 		}
@@ -207,18 +385,69 @@ long double DataIO :: compute_cost()
 	for (int i=0 ; i<n ; ++i)
 	{
 		long double dis = 1e100;
+		// centers is a vector of size number of clusters/centers...
 		for (int j=0 ; j<centers.size() ; ++j)
 		{
-			if (computeEuclideanDist(point[i], point[centers[j]]) < dis)
+			// if (computeEuclideanDist(point[i], point[centers[j]]) < dis)
+			if (compute_dist(i, centers[j]) < dis)
 			{
-				dis = computeEuclideanDist(point[i], point[centers[j]]);
+				// dis = computeEuclideanDist(point[i], point[centers[j]]);
+				dis = compute_dist(i, centers[j]);
 			}
 		}
 		// take weighted cost... -- change
 		ans += dis;
+
 	}
 	return ans;
 }
+
+
+long double DataIO :: compute_weighted_cost()
+{//computes weighted k-median cost using the vectors centers
+	long double ans = 0.0;
+	for (int i=0 ; i<n ; ++i)
+	{
+		long double dis = 1e100;
+		for (int j=0 ; j<centers.size() ; ++j)
+		{
+			// if (computeEuclideanDist(point[i], point[centers[j]]) < dis)
+			if (compute_dist(i, centers[j]) < dis)
+			{
+				// dis = computeEuclideanDist(point[i], point[centers[j]]);
+				dis = compute_dist(i, centers[j]);
+			}
+		}
+		// take weighted cost... -- change
+		// ans += dis;
+		ans += (corWeights[i] * dis);
+	}
+	return ans;
+}
+
+
+//Computing the distance between the ith and jth points in the dataset
+long double DataIO :: compute_dist(int i , int j)
+{
+	long double ans = 0.0;
+	for (int dd=0 ; dd<d ; ++dd)
+	{
+		ans += (point[i][dd]-point[j][dd])*(point[i][dd]-point[j][dd]);
+	}
+	return sqrt(ans);
+}
+
+
+long double DataIO :: compute_dist_vectors(std::vector<long double>& point_i, std::vector<long double>& point_j)
+{
+	long double dist = 0.0;
+	for (int dd=0 ; dd < point_i.size() ; ++dd)
+	{
+		dist += (point_i[dd]-point_j[dd])*(point_i[dd]-point_j[dd]);
+	}
+	return sqrt(dist);
+}
+
 
 long double DataIO :: evaluate_fairness()
 {
@@ -229,9 +458,11 @@ long double DataIO :: evaluate_fairness()
 		long double dis = 1e100;
 		for (int j=0 ; j<centers.size() ; ++j)
 		{
-			if (dis > computeEuclideanDist(point[i], point[centers[j]]))
+			// if (dis > computeEuclideanDist(point[i], point[centers[j]]))
+			if (dis > compute_dist(i, centers[j]))
 			{
-				dis = computeEuclideanDist(point[i], point[centers[j]]);
+				// dis = computeEuclideanDist(point[i], point[centers[j]]);
+				dis = compute_dist(i, centers[j]);
 			}
 		}
 		if (dis/r[i] > maxF)
@@ -239,6 +470,8 @@ long double DataIO :: evaluate_fairness()
 			maxF = dis/r[i];
 		}
 	}
+
+	cout << "max F = " << maxF << endl;
 	return maxF;
 }
 
@@ -249,6 +482,8 @@ int DataIO :: Local_Search_initialization(long double alpha)
 	// memset(whichBall,-1,sizeof(whichBall));
 
 	int cnum = compute_balls(3*alpha);//computes critical balls
+
+	// cout << "cnum = " << cnum << endl;
 
 	output_crit_balls = cnum;
 
@@ -266,7 +501,8 @@ int DataIO :: Local_Search_initialization(long double alpha)
 	{
 		for (int j=0 ; j<balls.size() ; ++j)
 		{
-			if (computeEuclideanDist(point[i],point[balls[j]]) < alpha*r[balls[j]])
+			// if (computeEuclideanDist(point[i],point[balls[j]]) < alpha*r[balls[j]])
+			if (compute_dist(i,balls[j]) < alpha*r[balls[j]])
 			{
 				whichBall[i]=j;
 			}
@@ -276,7 +512,8 @@ int DataIO :: Local_Search_initialization(long double alpha)
 	{
 		for (int j=0 ; j< balls.size() ; ++j)
 		{
-			if (computeEuclideanDist(point[i], point[balls[j]]) < computeEuclideanDist(point[i], point[center[i]]))
+			// if (computeEuclideanDist(point[i], point[balls[j]]) < computeEuclideanDist(point[i], point[center[i]]))
+			if (compute_dist(i, balls[j]) < compute_dist(i, center[i]))
 				center[i] = balls[j];
 		}
 	}
@@ -296,6 +533,9 @@ long double DataIO :: Local_Search(long double alpha)
 	Local_Search_initialization(alpha);
 	output_init_cost = compute_cost();
 	output_init_fair = evaluate_fairness();
+
+	cout << "init ls cost = " << output_init_cost << "init ls fair = " << output_init_fair << endl;
+
 	bool improved = true;
 	while (improved)
 	{
@@ -312,7 +552,8 @@ long double DataIO :: Local_Search(long double alpha)
 						long double prev_cost = compute_cost();
 						int prev_c = centers[i];
 						centers[i] = j;
-						if (compute_cost()<prev_cost*0.99)
+						long double cc = compute_cost();
+						if (cc<prev_cost*0.99)
 						{//checks if the cost is improved
 							iscenter[j] = true;
 							iscenter[prev_c] = false;
@@ -327,6 +568,7 @@ long double DataIO :: Local_Search(long double alpha)
 								cnt[whichBall[j]]++;
 							}
 							improved = true;
+							std::cout << "Improved cost -- " << cc << std::endl;
 						}
 						else
 						{
@@ -341,15 +583,239 @@ long double DataIO :: Local_Search(long double alpha)
 }
 
 
-int DataIO :: computeMVIndFair()
+long double DataIO :: Local_Search_Weighted(long double alpha)
 {
-	output_ls_cost = Local_Search(alpha);
-	output_ls_fair = evaluate_fairness();
+	//local search algorithm
+	Local_Search_initialization(alpha);
+	output_init_cost = compute_weighted_cost();
+	output_init_fair = evaluate_fairness();
+
+	cout << "init ls cost = " << output_init_cost << "init ls fair = " << output_init_fair << endl;
+
+	bool improved = true;
+	while (improved)
+	{
+		improved = false;
+		for (int i=0 ; i<centers.size() ; ++i)
+		{
+			for (int j=0 ; j<n ; ++j)
+			{
+				if (!iscenter[j])
+				{
+					int b = whichBall[centers[i]];
+					if (b==-1 || cnt[b]>1 || whichBall[j]==b)
+					{//checks for feasibility
+						long double prev_cost = compute_weighted_cost();
+						int prev_c = centers[i];
+						centers[i] = j;
+						long double cc = compute_weighted_cost();
+						if (cc<prev_cost*0.99)
+						{//checks if the cost is improved
+							iscenter[j] = true;
+							iscenter[prev_c] = false;
+							
+							if (whichBall[prev_c]!=-1)
+							{
+								cnt[whichBall[prev_c]]--;
+							}
+							
+							if (whichBall[j]!=-1)
+							{
+								cnt[whichBall[j]]++;
+							}
+							improved = true;
+							std::cout << "Improved cost -- " << cc << std::endl;
+						}
+						else
+						{
+							centers[i] = prev_c;
+						}
+					}
+				}
+			}
+		}
+	}
+	return compute_weighted_cost();
 }
 
-int DataIO :: generate_output()
+
+int DataIO :: storeCenters()
 {
-	ofstream fout("output.csv", ofstream::app);
+
+	unordered_map<int, bool> uniqueCenterIds; 
+
+	// printVec(point[center[0]]);
+	for(int i = 0; i < center.size(); i++)
+	{
+		uniqueCenterIds[center[i]] = 1;
+	}
+	cout << "Got the unique centers...\n"; 
+	unordered_map<int, bool> :: iterator it;
+
+	for(it = uniqueCenterIds.begin(); it != uniqueCenterIds.end(); ++it)
+	{
+
+	// for(int i = 0; i < center.size(); i++)
+	// {
+		centerVectors.push_back(it->first);
+	}
+	return 0;
+}
+
+int DataIO :: computeMVIndFair()
+{
+	cout << "MV Ind Fairness --- \n";
+	output_ls_cost = Local_Search(alpha);
+	cout << "Evaluating Fairness...\n";
+	output_ls_fair = evaluate_fairness();
+
+	storeCenters();
+	cout << "stored centers\n";
+	return 0;
+}
+
+int DataIO :: computeMVIndFairWeighted()
+{
+	cout << "MV Ind Fairness --- \n";
+	output_ls_cost = Local_Search_Weighted(alpha);
+	cout << "Evaluating Fairness...\n";
+	output_ls_fair = evaluate_fairness();
+	storeCenters();
+	cout << "stored centers\n";
+	return 0;
+}
+
+
+long double DataIO :: computeCostForPoint(vector<long double> eachPoint)
+{
+	// long double minCost = computeEuclideanDist(eachPoint, point[centerVectors[0]]);
+	long double minCost = compute_dist_vectors(eachPoint, point[centerVectors[0]]);
+
+	for(int i = 1; i < centerVectors.size(); i++)
+	{
+		// long double thisCenterCost = computeEuclideanDist(eachPoint, point[centerVectors[i]]);
+		long double thisCenterCost = compute_dist_vectors(eachPoint, point[centerVectors[i]]);
+		if (minCost > thisCenterCost)
+		{
+			minCost = thisCenterCost;
+		} 
+	}
+
+	return minCost;
+}
+
+
+long double DataIO :: readFullFileAndComputeCost(string fileName)
+{
+
+	long double totalCost = 0.0;
+	stringstream ss;
+	string line;
+
+	long double tempVar;
+
+	ifstream fin(fileName);
+	// space separated  values...
+
+	while(getline(fin, line))
+	{
+		ss.clear();
+		ss.str("");
+
+		ss << line;
+
+		vector<long double> tempVec;
+		long double tempval;
+		while(ss >> tempval)
+		{
+			tempVec.push_back(tempval);
+		}
+
+		long double costOnPoint = computeCostForPoint(tempVec);		// this is just the euclidean distance...
+
+		totalCost += costOnPoint;
+
+		distOfEachPointFullData.push_back(costOnPoint);
+	}
+
+	// cout << "Size - distOfEachPointFullData = " << distOfEachPointFullData.size() << endl;
+
+	fin.close();
+	// printVecVec(point);
+	return totalCost;
+}
+
+
+int DataIO :: computeCostOnFullDataUsingCoresetCenters(string fileName)
+{
+	costOnFullData = readFullFileAndComputeCost(fileName);
+	 // = std::accumulate(localDistOfEachPoint.begin(), localDistOfEachPoint.end(), 0.0);
+	cout << "Got the cost on full data --- " << costOnFullData << endl;
+	return 0;
+}
+
+int DataIO :: computeFairnessOnFullDataUsingCoresetCenters(string fairRadiusFileName)
+{
+
+	long double maxFairness = 0, fairnessForPoint;
+	stringstream ss;
+	string line;
+
+	ifstream fin(fairRadiusFileName);
+	// space separated  values...
+	int i = 0;
+	while(getline(fin, line))
+	{
+		ss.clear();
+		ss.str("");
+
+		ss << line;
+
+		int pointId;
+		long double pointFairRadius;
+		
+		ss >> pointId >> pointFairRadius;
+		
+		fairnessForPoint = distOfEachPointFullData[i]/pointFairRadius;
+
+		if(maxFairness < fairnessForPoint)
+		{
+			maxFairness = fairnessForPoint;
+		}
+
+		i += 1;
+	}
+
+	fin.close();
+
+	fairnessOnFullData = maxFairness;
+	cout << "Fairness evaluated --" << maxFairness << endl;
+	return 0;
+}
+
+
+int DataIO :: generate_output(string fileName, double computeTime, int flag)
+{
+	vector<string> pathFileName = getPathAndFileName(fileName);
+
+	string outFileName = "output/out_" + pathFileName[1];
+	outFileName = pathFileName[0] + "/" + outFileName;
+
+	// fileName = "./allOutput/out_" + fileName;
+
+	cout << "writing output to -- " << outFileName << endl;
+
+	ofstream fout(outFileName);
+
+	if(flag == 0)
+	{
+		fout << "n,d,k,output_crit_balls,output_jung_fair,output_jung_cost,output_init_fair,output_init_cost,output_ls_fair,output_ls_cost,computeTime\n";
+	}
+	else
+	{
+		fout << "n,d,k,output_crit_balls,output_jung_fair,output_jung_cost,output_init_fair,output_init_cost,output_ls_fair,output_ls_cost,costOnFullData,fairnessOnFullData,computeTime\n";
+	}
+
 	fout << n << ",";
 	fout << d << ",";
 	fout << k << ",";
@@ -358,10 +824,21 @@ int DataIO :: generate_output()
 	
 	fout << output_jung_fair << ",";
 	fout << output_jung_cost << ",";
+	
 	fout << output_init_fair << ",";
 	fout << output_init_cost << ",";
+
 	fout << output_ls_fair << ",";
-	fout << output_ls_cost << endl;
+	fout << output_ls_cost << ",";
+
+	if(flag)
+	{
+		fout << costOnFullData << ",";
+		fout << fairnessOnFullData << ",";
+	}
+
+	fout << setprecision(20) << computeTime << "\n";
+
 	fout.close();
 
 	return 0;

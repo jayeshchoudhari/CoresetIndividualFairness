@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <ctime>
 #include <chrono>
-#include <omp.h>
+#include <unordered_map>
+
 
 #endif //NAMESPACE_H
