@@ -4,31 +4,68 @@
 
 using namespace std;
 
-DataIO :: DataIO(int numPoints, int dim, int kcenters, string inputFileName, int maxn, int maxd, long double epsVal)
+// DataIO :: DataIO(int numPoints, int dim, int kcenters, string inputFileName, int maxn, int maxd, long double epsVal)
+DataIO :: DataIO(int kcenters, string inputFileName, int maxn, int maxd, long double epsVal)
 {
-	n = numPoints;
-	d = dim;
+	// n = numPoints;
+	// d = dim;
 	k = kcenters;
 	eps = epsVal;
 
-	cout << n << " " << d  << " " << k << " " << eps << endl;
+	// cout << n << " " << d  << " " << k << " " << eps << endl;
+	cout << k << " " << eps << endl;
 
 	// point.resize(maxn, vector<long double>(maxd));
-
-	r.resize(numPoints);
-	// ogWeights.resize(maxn, 0.0);
-	corWeights.resize(numPoints, 0.0);
-
-	covered.resize(numPoints, 0);	//shows if a point is covered by current centers
-	center.resize(numPoints, -1);	//shows the corresponding center for each point -- default set to -1
-
-	whichBall.resize(numPoints, -1);	//keeps for each point in which critical ball they exist or -1 otherwise
-	iscenter.resize(numPoints, 0);	//keeps for each point if it is in the current set of centers
-
 	// readInput(inputFileName);
 }
 
-//Reading the input points. Each point comes in a separate line and the coordinates are separated by comma.
+
+//Reading the input points. Each point comes in a separate line and the coordinates are separated by space.
+int DataIO :: readInput(string fileName)
+{
+	stringstream ss;
+	string line;
+
+	ifstream fin(fileName);
+	// space separated  values...
+	int i = 0;
+	while(getline(fin, line))
+	{
+		ss.clear();
+		ss.str("");
+
+		ss << line;
+
+		vector<long double> tempVec;
+		long double tempval;
+
+		while(ss >> tempval)
+		{
+			tempVec.push_back(tempval);
+		}
+		
+		// cout << "push_back point ... \n";
+		point.push_back(tempVec);
+
+		corWeights.push_back(1.0);
+		// cout << "point ... \n";
+
+		i += 1;
+	}
+
+	fin.close();
+
+	n = point.size();
+	d = point[0].size();
+
+	cout << "Going for initialization ... \n";
+	initializeDataStructure(n);
+
+	return 0;
+}
+
+/*
+//Reading the input points. Each point comes in a separate line and the coordinates are separated by space.
 int DataIO :: readInput(string fileName)
 {
 	cout << "Reading input -- " << endl;
@@ -58,7 +95,56 @@ int DataIO :: readInput(string fileName)
 	// printVecVec(point);
 	return 0;
 }
+*/
 
+
+int DataIO :: readInputWeighted(string fileName)
+{
+	stringstream ss;
+	string line;
+
+	ifstream fin(fileName);
+	// space separated  values...
+	int i = 0;
+	long double weightVal;
+	while(getline(fin, line))
+	{
+		ss.clear();
+		ss.str("");
+
+		ss << line;
+
+		vector<long double> tempVec;
+		long double tempval;
+
+		while(ss >> tempval)
+		{
+			tempVec.push_back(tempval);
+		}
+		// if there is any other with weights...
+		// last index of each line is weight...
+		weightVal = tempVec.back();
+		corWeights.push_back(weightVal);
+
+		// popping back the last weight element 
+		tempVec.pop_back();
+		point.push_back(tempVec);
+
+		i += 1;
+	}
+
+	fin.close();
+	
+	n = point.size();
+	d = point[0].size();
+	
+	initializeDataStructure(n);
+
+	return 0;
+}
+
+
+/*
 // Reading the input points. Each point comes in a separate line and the coordinates are separated by comma.
 // last index is the weight of the point
 int DataIO :: readInputWeighted(string fileName)
@@ -90,7 +176,25 @@ int DataIO :: readInputWeighted(string fileName)
 	// printVecVec(point);
 	return 0;
 }
+*/
 
+int DataIO :: initializeDataStructure(int numPoints)
+{
+	cout << "Starting to initialize\n";
+	r.resize(numPoints);
+	// ogWeights.resize(maxn, 0.0);
+	// corWeights.resize(numPoints, 0.0);
+
+	covered.resize(numPoints, 0);	//shows if a point is covered by current centers
+	center.resize(numPoints, -1);	//shows the corresponding center for each point -- default set to -1
+
+	whichBall.resize(numPoints, -1);	//keeps for each point in which critical ball they exist or -1 otherwise
+	iscenter.resize(numPoints, 0);	//keeps for each point if it is in the current set of centers
+
+	cout << "Initialized Data-structures -- \n";
+
+	return 0;
+}
 
 
 long double DataIO :: compute_r(int i, int maxn)
@@ -167,6 +271,30 @@ long double DataIO :: compute_r_weighted(int i, int maxn, long double totalWeigh
 	return rVal;
 }
 
+int DataIO :: writeFairRadiusToFile(string fileName)
+{
+	string strk = std::to_string(k);
+
+	vector<string> pathFileName = getPathAndFileName(fileName);
+
+	string fairOutFileName = "fairRadiusFiles/fairRadius_" + strk + "_" + pathFileName[1];
+	fairOutFileName = pathFileName[0] + "/" + fairOutFileName;
+
+	cout << "writing to fairOutFileName\n"; 
+
+	ofstream fout(fairOutFileName);
+
+	// space separated  values...
+	for(int i = 0; i < r.size(); i++)
+	{
+		fout << i << " " << r[i] << "\n";
+	}
+
+	fout.close();
+
+	return 0;
+}
+
 
 int DataIO :: computeFairRadius(int maxn, string fileName)
 {
@@ -176,18 +304,8 @@ int DataIO :: computeFairRadius(int maxn, string fileName)
 		// cout << i << " " << r[i] << endl;
 	}
 
-
-	fileName = "./fairRadiusFiles/fairRadius_" + fileName;
-
-	ofstream fout(fileName);
-
-	// space separated  values...
-	for(int i = 0; i < r.size(); i++)
-	{
-		fout << i << " " << r[i] << "\n";
-	}
-
-	fout.close();
+	writeFairRadiusToFile(fileName);
+	cout << "Fair Radius written to file .. \n";
 
 	return 0;
 }
@@ -463,7 +581,18 @@ long double DataIO :: evaluate_fairness()
 			{
 				// dis = computeEuclideanDist(point[i], point[centers[j]]);
 				dis = compute_dist(i, centers[j]);
+
+				// if(r[i] == 0)
+				// {
+				// 	cout << i << " " << r[i] << " " << dis << endl;
+				// }
 			}
+		}
+
+
+		if(dis == 0 && r[i] == 0)
+		{
+			continue;
 		}
 		if (dis/r[i] > maxF)
 		{
@@ -691,7 +820,7 @@ int DataIO :: computeMVIndFairWeighted()
 	output_ls_cost = Local_Search_Weighted(alpha);
 	cout << "Evaluating Fairness...\n";
 	output_ls_fair = evaluate_fairness();
-	
+
 	// storeCenters();
 	// cout << "stored centers\n";
 	return 0;
@@ -723,8 +852,6 @@ long double DataIO :: readFullFileAndComputeCost(string fileName)
 	long double totalCost = 0.0;
 	stringstream ss;
 	string line;
-
-	long double tempVar;
 
 	ifstream fin(fileName);
 	// space separated  values...
@@ -801,6 +928,11 @@ int DataIO :: computeFairnessOnFullDataUsingCoresetCenters(string fairRadiusFile
 	fin.close();
 
 	fairnessOnFullData = maxFairness;
+	if(maxFairness == 0)
+	{
+		cout << "Here it is...\n";
+		exit(0);
+	}
 	cout << "Fairness evaluated --" << maxFairness << endl;
 	return 0;
 }
@@ -810,7 +942,9 @@ int DataIO :: generate_output(string fileName, double computeTime, int flag)
 {
 	vector<string> pathFileName = getPathAndFileName(fileName);
 
-	string outFileName = "output/out_" + pathFileName[1];
+	string strk = std::to_string(k);
+
+	string outFileName = "output/out_" + strk + "_" + pathFileName[1];
 	outFileName = pathFileName[0] + "/" + outFileName;
 
 	// fileName = "./allOutput/out_" + fileName;
@@ -825,7 +959,7 @@ int DataIO :: generate_output(string fileName, double computeTime, int flag)
 	}
 	else
 	{
-		fout << "n,d,k,output_crit_balls,output_jung_fair,output_jung_cost,output_init_fair,output_init_cost,output_ls_fair,output_ls_cost,costOnFullData,fairnessOnFullData,computeTime\n";
+		fout << "n,d,k,output_crit_balls,output_jung_fair,output_jung_cost,output_init_fair,output_init_cost,output_ls_fair,output_ls_cost,fairnessOnFullData,costOnFullData,computeTime\n";
 	}
 
 	fout << n << ",";
@@ -835,18 +969,18 @@ int DataIO :: generate_output(string fileName, double computeTime, int flag)
 	fout << output_crit_balls << ",";
 	
 	fout << output_jung_fair << ",";
-	fout << output_jung_cost << ",";
+	fout << setprecision(20) << output_jung_cost << ",";
 	
 	fout << output_init_fair << ",";
-	fout << output_init_cost << ",";
+	fout << setprecision(20) << output_init_cost << ",";
 
 	fout << output_ls_fair << ",";
-	fout << output_ls_cost << ",";
+	fout << setprecision(20) << output_ls_cost << ",";
 
 	if(flag)
 	{
-		fout << costOnFullData << ",";
 		fout << fairnessOnFullData << ",";
+		fout << setprecision(20) << costOnFullData << ",";
 	}
 
 	fout << setprecision(20) << computeTime << "\n";

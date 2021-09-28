@@ -39,13 +39,16 @@ class DataIO
 		std::vector<bool> iscenter;//keeps for each point if it is in the current set of centers
 		int output_crit_balls;//for outputting the number of critical balls
 
-		DataIO(int n, int d, int k, std::string inputFileName, int maxn, int maxd, long double eps);
+		// DataIO(int n, int d, int k, std::string inputFileName, int maxn, int maxd, long double eps);
+		DataIO(int k, std::string inputFileName, int maxn, int maxd, long double eps);
 
 		int readInput(std::string fileName);
 		int readInputWeighted(std::string fileName);
+		int initializeDataStructure(int numPoints);
 
 		int computeFairRadius(int maxn, std::string fileName);
 		long double compute_r(int i, int maxn);
+		int writeFairRadiusToFile(std::string fileName);
 
 		int computeWeightedFairRadius(int maxn);
 		long double compute_r_weighted(int i, int maxn, long double totalWeight);
