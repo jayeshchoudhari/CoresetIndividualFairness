@@ -9,22 +9,22 @@ import json
 import sys
 
 
-if len(sys.argv) != 3:
+if len(sys.argv) != 4:
 	print("Error (Not enough input parameters):")
 	print("1: Dataset Name (make sure that a folder named 'datasetNameCoreset' exists inside 'datasets' folder)")
 	print("2: FileName")
+	print("3: k(num Centers)")
 	exit(1)
 
 
 datasetName = sys.argv[1]
 datasetFileName = sys.argv[2]
+k = int(sys.argv[3])
 
 datasetFolder = "datasets/" + datasetName + "Coreset"
 
-
 percentageSizes = [0.5, 1.0, 2.0, 5.0, 7.0, 10.0, 15.0, 20.0]
 numCopies = 5
-k = 5
 coresetAlgos = ['kmedian', 'indFair', 'uni']
 listOfPoints =  []
 
@@ -79,7 +79,6 @@ def KMedianCost(biCriteriaCenters):
 	# average Cost...
 	for i in range(len(clusterAvgWiseCost)):
 		clusterAvgWiseCost[i] = clusterAvgWiseCost[i]/clusterWiseNumPoints[i]
-
 
 
 	avgTotalCost = totalCost / len(listOfPoints)
@@ -166,7 +165,7 @@ kmSensComp_start = perf_counter()
 centers, ind = _kmeans_plusplus(listOfPoints, 5, 1)
 # print(centers)
 
-kmedian = KMeans(n_clusters=5, random_state=0, max_iter=1, n_init = 1).fit(listOfPoints)
+kmedian = KMeans(n_clusters=k, random_state=0, max_iter=1, n_init = 1).fit(listOfPoints)
 # print(kmedian.cluster_centers_)
 biCriteriaCenters = kmedian.cluster_centers_
 
@@ -260,4 +259,4 @@ for eachPerc in percentageSizes:
 		print("Done creating coreset for perc = ", eachPerc, " withCopyId = ", copyId)
 
 
-writeToJsonFile(timeForEachMethod, datasetFolder + "/" + datasetName + "_coresetCreationTimeForEachMethod.json")
+writeToJsonFile(timeForEachMethod, datasetFolder + "/" + datasetName + "_" + str(k) + "_coresetCreationTimeForEachMethod.json")
