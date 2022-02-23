@@ -31,7 +31,9 @@ int main(int argc, char *argv[])
     //time start
     auto startTime = std::chrono::system_clock::now();
 
+    cout << "Computing weighted Fair radius...\n";
     DIO.computeWeightedFairRadius(maxn);
+    cout << "Got weighted Fair radius...n";
 
     DIO.computeJungEtAlAlphaAndCostWeighted();
 
