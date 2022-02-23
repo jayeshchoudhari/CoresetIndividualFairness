@@ -1,5 +1,5 @@
 # Coreset for Individual Fairness
-
+The repo contains the code for creating Coreset for the Individual Fair Clustering problem. Part of this work is accepted at AISTATS 2022. The paper title is "On Coresets for Fair Regression and Individually Fair Clustering".  To access the code for fair regression the link is:  https://github.com/jayeshchoudhari/CoresetsForFairRegression
 Compile the code using:
 ```
 make
