@@ -248,14 +248,18 @@ long double DataIO :: compute_r_weighted(int i, int maxn, long double totalWeigh
 	// Change this to sum of weights...
 	// long double maxWeight = ((n-1)*1.0)/k;
 	long double maxWeight = totalWeight/k;
-	// cout << "max weight : " << maxWeight << " totalWeight = " << totalWeight << endl;
 	long double rVal = tempRadWeights[(n-1)/k][0];
+	// cout << "max weight : " << maxWeight << " totalWeight = " << totalWeight << " initial rval = " << rVal << " (n-1)/k = " << (n-1)/k <<  endl;
 
 	for(int q = 0; q < tempRadWeights.size(); q++)
 	{
 		if(localWeight + tempRadWeights[q][1] <= maxWeight)
 		{
 			localWeight += tempRadWeights[q][1];
+		}
+		else if(q == 0)
+		{
+			return tempRadWeights[0][0];
 		}
 		else
 		{
@@ -320,11 +324,12 @@ int DataIO :: computeWeightedFairRadius(int maxn)
 		totalWeight += corWeights[i];
 	}
 	// cout << "Total Weight = " << totalWeight << endl;
+	// cout << "Total Points = " << corWeights.size() << endl;
 
 	for (int i=0 ; i<n ; ++i)//compute fair radiuses
 	{
 		r[i] = compute_r_weighted(i, maxn, totalWeight);
-		// cout << r[i] << endl;
+		// cout << i << " " << r[i] << endl;
 	}
 
 	return 0;

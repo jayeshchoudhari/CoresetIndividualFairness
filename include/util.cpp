@@ -22,7 +22,7 @@ bool sortcol(const vector<long double>& v1, const vector<long double>& v2)
 
 int printVec(vector<long double> &a)
 {
-	cout << "Printing point -- " << endl;
+	// cout << "Printing point -- " << endl;
 	for(int i = 0; i < a.size(); ++i)
 	{
 		cout << a[i] << "\t";
@@ -38,6 +38,7 @@ int printVecVec(vector <vector<long double>> &p)
 {
 	for(int i = 0; i < p.size(); i++)
 	{
+		cout << "point Id: " << i << " ---- ";
 		printVec(p[i]);
 	}
 
