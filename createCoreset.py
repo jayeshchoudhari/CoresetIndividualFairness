@@ -9,19 +9,24 @@ import json
 import sys
 
 
-if len(sys.argv) != 4:
+if len(sys.argv) != 5:
 	print("Error (Not enough input parameters):")
 	print("1: Dataset Name (make sure that a folder named 'datasetNameCoreset' exists inside 'datasets' folder)")
 	print("2: FileName")
 	print("3: k(num Centers)")
+	print("4: Real (0) or SemiSynthetic(1)")
 	exit(1)
 
 
 datasetName = sys.argv[1]
 datasetFileName = sys.argv[2]
 k = int(sys.argv[3])
+realOrSemiSynth = int(sys.argv[4])
 
-datasetFolder = "datasets/" + datasetName + "Coreset"
+if realOrSemiSynth == 0:
+	datasetFolder = "datasets/" + datasetName + "Coreset"
+else:
+	datasetFolder = "semiSynthDatasets/" + datasetName + "Coreset"
 
 percentageSizes = [0.5, 1.0, 2.0, 5.0, 7.0, 10.0, 15.0, 20.0]
 numCopies = 5
